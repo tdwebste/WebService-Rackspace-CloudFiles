@@ -106,7 +106,7 @@ sub _request {
 
 sub containers {
     my $self    = shift;
-    my $request = HTTP::Request->new( 'GET', 
+    my $request = HTTP::Request->new( 'GET',
         $self->storage_url . '?format=json',
         [ 'X-Auth-Token' => $self->token ] );
     my $response = $self->_request($request);
@@ -220,9 +220,11 @@ WebService::Rackspace::CloudFiles - Interface to Rackspace CloudFiles service
 	  description => 'this is a description',
 	  useful_number => 17
   });
-  
+
   # To create a new object with the contents of a local file
-  my $yyy = $container->object( name => 'YYY', content_type => 'text/plain' );
+  my $yyy = $container->object( name => 'YYY',
+    content_type => 'text/plain',
+    content_disposition => 'attachment; filename=README.txt');
   $yyy->put_filename('README');
 
   # To fetch an object:
@@ -232,12 +234,13 @@ WebService::Rackspace::CloudFiles - Interface to Rackspace CloudFiles service
   say 'has md5 ' . $xxx2->etag;
   say 'has size ' . $xxx2->size;
   say 'has content type ' . $xxx2->content_type;
+  say 'has content disposition ' . $xxx2->content_disposition;
   say 'has last_modified ' . $xxx2->last_modified;
 
   # To fetch metadata of an object:
   say 'metadata description ' . $xxx2->object_metadata->{'description'};
   say 'metadata useful_number ' . $xxx2->object_metadata->{'useful_number'};
-  
+
   # To download an object to a local file
   $yyy->get_filename('README.downloaded');
 

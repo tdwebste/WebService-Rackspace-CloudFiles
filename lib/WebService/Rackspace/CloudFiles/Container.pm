@@ -29,7 +29,7 @@ sub _url {
 
 sub cdn_init {
     my $self = shift;
-    
+
     my $response = $self->head('cdn');
     my $cdn_enabled = $response->header('X-CDN-Enabled');
     $self->cdn_enabled(ref $cdn_enabled eq ref JSON::Any->true ? 1 : 0 );
@@ -148,6 +148,7 @@ sub objects {
                     etag          => $bit->{hash},
                     size          => $bit->{bytes},
                     content_type  => $bit->{content_type},
+                    content_disposition  => $bit->{content_disposition},
                     last_modified => $bit->{last_modified},
                     );
             }
@@ -264,6 +265,9 @@ an object.
 
   my $xxx = $container->object( name => 'XXX' );
   my $yyy = $container->object( name => 'YYY', content_type => 'text/plain' );
+  my $yyy = $container->object( name => 'YYY',
+    content_type => 'text/plain',
+    content_disposition => 'attachment; filename=README.txt');
 
 =head2 delete
 
@@ -273,12 +277,12 @@ Deletes the container, which should be empty:
 
 =head2 purge_cdn
 
-Purges a CDN enabled container without having to wait for the TTL to expire. 
+Purges a CDN enabled container without having to wait for the TTL to expire.
 
   $container->purge_cdn;
 
 Purging a CDN enabled container may take a very long time. So you can optionally
-provide one or more emails to be notified after the container is fully purged. 
+provide one or more emails to be notified after the container is fully purged.
 
   my @emails = ('foo@example.com', 'bar@example.com');
   $container->purge_cdn(@emails);

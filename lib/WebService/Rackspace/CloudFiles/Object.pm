@@ -21,6 +21,14 @@ has 'etag' => ( is => 'rw', isa => 'WebService::Rackspace::CloudFiles::Etag' );
 has 'size' => ( is => 'rw', isa => 'Int' );
 has 'content_type' =>
     ( is => 'rw', isa => 'Str', default => 'binary/octet-stream' );
+
+has 'content_disposition' => (
+    is => 'rw',
+    isa => 'Str',
+    required => 0,
+    default   => 'inline'
+);
+
 has 'last_modified' =>
     ( is => 'rw', isa => 'WebService::Rackspace::CloudFiles::DateTime', coerce => 1 );
 
@@ -45,7 +53,7 @@ has 'object_metadata' => (
     required  => 0,
     default   => sub  {
         return {};
-    }  
+    }
 );
 
 has 'value' => (
@@ -104,7 +112,7 @@ sub head {
 
 sub get {
     my ($self, $force_retrieval) = @_;
-    
+
     if (!$force_retrieval && $self->cache_value() && defined($self->value()) ) {
         return $self->value();
     } else {
@@ -125,16 +133,16 @@ sub get {
 
 sub get_filename {
     my ( $self, $filename, $force_retrieval ) = @_;
-    
+
     ## if we aren't forcing retrieval, and we are caching values, and we have a local_filename
     ## defined and it matches the filename we were just given, and the local_filename actually
     ## exists on the filesystem... then we can think about using the cached value.
-    
+
     if (!$force_retrieval && $self->cache_value() && defined($self->local_filename()) &&
          $self->local_filename() eq $filename && -e $self->local_filename() ) {
-            
+
         ## in order to do this, we have to at least verify that the file we have matches
-        ## the file on cloud-files.  Best way to do that is to load the metadata and 
+        ## the file on cloud-files.  Best way to do that is to load the metadata and
         ## compare the etags.
         $self->head();
         if ($self->etag() eq file_md5_hex($filename)) {
@@ -142,7 +150,7 @@ sub get_filename {
             return $self->local_filename();
         }
     }
-    
+
     ## if we are here, we have to download the file.
     my $request = HTTP::Request->new( 'GET', $self->_url,
         [ 'X-Auth-Token' => $self->cloudfiles->token ] );
@@ -150,8 +158,8 @@ sub get_filename {
 
     confess 'Object ' . $self->name . ' not found' if $response->code == 404;
     confess 'Unknown error' if $response->code != 200;
-    confess 'Data corruption error' unless $self->_validate_local_file( $filename,  
-                                                                        $response->header('Content-Length'),  
+    confess 'Data corruption error' unless $self->_validate_local_file( $filename,
+                                                                        $response->header('Content-Length'),
                                                                         $response->header('ETag') );
     $self->_set_attributes_from_response($response);
     my $last_modified = $self->last_modified->epoch;
@@ -199,10 +207,10 @@ sub put {
         $value
     );
     my $response = $self->cloudfiles->_request($request);
-    
+
     if ($response->code == 204) {
         ## since the value was set successfully, we can set all our instance data appropriately.
-        
+
         $self->etag($md5_hex);
         $self->size($size);
         if ($self->cache_value) {
@@ -232,7 +240,7 @@ sub put_filename {
         $self->_content_sub($filename),
     );
     my $response = $self->cloudfiles->_request($request);
-    
+
     if ($response->code == 204) {
         $self->etag($md5_hex);
         $self->size($size);
@@ -240,7 +248,7 @@ sub put_filename {
             $self->local_filename($filename);
         }
     }
-    
+
     confess 'Missing Content-Length or Content-Type header'
         if $response->code == 412;
     confess 'Data corruption error' if $response->code == 422;
@@ -251,18 +259,19 @@ sub put_filename {
 sub _prepare_headers {
     my ($self, $etag, $size) = @_;
     my $headers = HTTP::Headers->new();
-    
+
     $headers->header('X-Auth-Token' => $self->cloudfiles->token );
     $headers->header('Content-length' => $size );
     $headers->header('ETag' => $etag );
     $headers->header('Content-Type' => $self->content_type);
-    
+    $headers->header('Content-Disposition' => $self->content_disposition);
+
     my $header_field;
     foreach my $key (keys %{$self->object_metadata}) {
         $header_field = 'X-Object-Meta-' . $key;
         # make _'s -'s for header sending.
         $header_field =~ s/_/-/g;
-        
+
         $headers->header($header_field => $self->object_metadata->{$key});
     }
     return $headers;
@@ -314,10 +323,11 @@ sub _content_sub {
 
 sub _set_attributes_from_response {
     my ( $self, $response ) = @_;
-    
+
     $self->etag( $response->header('ETag') );
     $self->size( $response->header('Content-Length') );
     $self->content_type( $response->header('Content-Type') );
+    $self->content_disposition( $response->header('Content-Disposition') );
     $self->last_modified( $response->header('Last-Modified') );
     my $metadata = {};
     foreach my $headername ($response->headers->header_field_names) {
@@ -333,16 +343,16 @@ sub _set_attributes_from_response {
 
 sub _validate_local_file {
     my ($self, $localfile, $size, $md5) = @_;
-    
+
     my $stat = stat($localfile);
     my $localsize = $stat->size;
-    
-    # first check size, if they are different, we don't need to bother with 
+
+    # first check size, if they are different, we don't need to bother with
     # an expensive md5 calculation on the whole file.
     if ($size != $localsize ) {
         return 0;
     }
-    
+
     if ($self->always_check_etag && ($md5 ne file_md5_hex($localfile))) {
         return 0;
     }
@@ -364,7 +374,9 @@ WebService::Rackspace::CloudFiles::Object - Represent a Cloud Files object
   $xxx->put('this is the value');
 
   # To create a new object with the contents of a local file
-  my $yyy = $container->object( name => 'YYY', content_type => 'text/plain' );
+  my $yyy = $container->object( name => 'YYY',
+    content_type => 'text/plain',
+    content_disposition => 'attachment; filename=README.txt');
   $yyy->put_filename('README');
 
   # To fetch an object:
@@ -374,6 +386,7 @@ WebService::Rackspace::CloudFiles::Object - Represent a Cloud Files object
   say 'has md5 ' . $xxx2->etag;
   say 'has size ' . $xxx2->size;
   say 'has content type ' . $xxx2->content_type;
+  say 'has content disposition ' . $xxx2->content_disposition;
   say 'has last_modified ' . $xxx2->last_modified;
 
   # To download an object to a local file
@@ -397,20 +410,20 @@ Returns the name of the object.
 Fetches the metadata of the object:
 
   $object->head;
-  
- 
+
+
 =head2 always_check_etag
 
 When set to true, forces md5 calculation on every file download and
 compares it to the provided etag. This can be a very expensive operation,
 especially on larger files. Setting always_check_etag to false will avoid the
-checksum on the file and will validate the file transfer was complete by 
-comparing the file sizes after download.  Defaults to true. 
+checksum on the file and will validate the file transfer was complete by
+comparing the file sizes after download.  Defaults to true.
 
 =head2 cache_value
 
-When set to true, any values retrieved from the server will be cached 
-within the object, this allows you to continue to use the value 
+When set to true, any values retrieved from the server will be cached
+within the object, this allows you to continue to use the value
 without re-retrieving it from CloudFiles repeatedly.  Defaults to false.
 
 =head2 get
@@ -432,7 +445,7 @@ and sets the last modified time of the file to the same as the object.
 
   $object->get_filename('README.downloaded');
 
-If cache_value is enabled and the file has already been retrieved and is 
+If cache_value is enabled and the file has already been retrieved and is
 present on the filesystem with the filename provided, and the file size and
 md5 hash of the local file match what is in CloudFiles, the file will not
 be re-retrieved and the local file will be returned as-is.  To force a
@@ -449,13 +462,13 @@ Deletes an object:
 =head2 purge_cdn
 
 Purges an object in a CDN enabled container without having to wait for the TTL
-to expire. 
+to expire.
 
   $object->purge_cdn;
 
 Purging an object in a CDN enabled container may take long time. So you can
 optionally provide one or more emails to be notified after the object is
-fully purged. 
+fully purged.
 
   my @emails = ('foo@example.com', 'bar@example.com');
   $object->purge_cdn(@emails);
@@ -497,7 +510,7 @@ Return the content type of an object:
 Return the last modified time of an object as a L<DateTime> object:
 
   say 'has last_modified ' . $object->last_modified;
-  
+
 =head2 object_metadata
 
 Sets or returns a hashref of metadata to be stored along with the file
@@ -506,10 +519,10 @@ must be scalar type, if you require storage of complex data, you will need
 to flatten it in some way prior to setting it here.  Also, due to the way
 that CloudFiles works with metadata, when retrieved from CloudFiles, your
 keys will be lowercase.  Note that since underscores are not permitted in
-keys within CloudFiles, any underscores are translated to dashes when 
+keys within CloudFiles, any underscores are translated to dashes when
 transmitted to CloudFiles.  They are re-translated when they are retrieved.
-This is mentioned only because if you access your data through a different 
-language or interface, your metadata keys will contain dashes instead of 
+This is mentioned only because if you access your data through a different
+language or interface, your metadata keys will contain dashes instead of
 underscores.
 
 =head2 cdn_url
