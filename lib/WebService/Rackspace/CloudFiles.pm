@@ -224,7 +224,7 @@ WebService::Rackspace::CloudFiles - Interface to Rackspace CloudFiles service
   # To create a new object with the contents of a local file
   my $yyy = $container->object( name => 'YYY',
     content_type => 'text/plain',
-    content_disposition => 'attachment; filename=README.txt');
+    content_disposition => 'attachment; filename=TESTME.txt');
   $yyy->put_filename('README');
 
   # To fetch an object:

@@ -5,6 +5,7 @@ use Moose::Util::TypeConstraints;
 use Digest::MD5 qw(md5_hex);
 use Digest::MD5::File qw(file_md5_hex);
 use File::stat;
+use Data::Dumper;
 
 subtype 'WebService::Rackspace::CloudFiles::DateTime' => as class_type('DateTime');
 coerce 'WebService::Rackspace::CloudFiles::DateTime'  => from 'Str' =>
@@ -21,13 +22,8 @@ has 'etag' => ( is => 'rw', isa => 'WebService::Rackspace::CloudFiles::Etag' );
 has 'size' => ( is => 'rw', isa => 'Int' );
 has 'content_type' =>
     ( is => 'rw', isa => 'Str', default => 'binary/octet-stream' );
-
-has 'content_disposition' => (
-    is => 'rw',
-    isa => 'Str',
-    required => 0,
-    default   => 'inline'
-);
+has 'content_disposition' => 
+    ( is => 'rw', isa => 'Str', required =>0, default   => 'inline');
 
 has 'last_modified' =>
     ( is => 'rw', isa => 'WebService::Rackspace::CloudFiles::DateTime', coerce => 1 );
@@ -274,6 +270,7 @@ sub _prepare_headers {
 
         $headers->header($header_field => $self->object_metadata->{$key});
     }
+    #  warn Dumper $headers;
     return $headers;
 }
 
@@ -376,7 +373,7 @@ WebService::Rackspace::CloudFiles::Object - Represent a Cloud Files object
   # To create a new object with the contents of a local file
   my $yyy = $container->object( name => 'YYY',
     content_type => 'text/plain',
-    content_disposition => 'attachment; filename=README.txt');
+    content_disposition => 'attachment; filename=TESTME.txt');
   $yyy->put_filename('README');
 
   # To fetch an object:

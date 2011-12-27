@@ -2,6 +2,7 @@ package WebService::Rackspace::CloudFiles::Container;
 use Moose;
 use MooseX::StrictConstructor;
 use JSON::Any;
+use Data::Dumper;
 
 has 'cloudfiles' =>
     ( is => 'ro', isa => 'WebService::Rackspace::CloudFiles', required => 1 );
@@ -138,6 +139,7 @@ sub objects {
             my @objects;
 
             my @bits = @{ JSON::Any->jsonToObj( $response->content ) };
+            #warn Dumper @bits;
             return unless @bits;
             foreach my $bit (@bits) {
                 push @objects,
@@ -148,7 +150,7 @@ sub objects {
                     etag          => $bit->{hash},
                     size          => $bit->{bytes},
                     content_type  => $bit->{content_type},
-                    content_disposition  => $bit->{content_disposition},
+                    #content_disposition  => $bit->{content_disposition},
                     last_modified => $bit->{last_modified},
                     );
             }
@@ -267,7 +269,7 @@ an object.
   my $yyy = $container->object( name => 'YYY', content_type => 'text/plain' );
   my $yyy = $container->object( name => 'YYY',
     content_type => 'text/plain',
-    content_disposition => 'attachment; filename=README.txt');
+    content_disposition => 'attachment; filename=TESTME.txt');
 
 =head2 delete
 
