@@ -47,7 +47,7 @@ $one->object_metadata({ description => 'this is a description', useful_number =>
 $one->put('this is one');
 
 ## these will fail on an account that doesn't have anything in it yet
-## a case that is likely when just installing the module, so move them 
+## a case that is likely when just installing the module, so move them
 ## to be after we've created something.
 ok( $cloudfiles->total_bytes_used, 'use some bytes' );
 ok( $cloudfiles->containers,       'have some containers' );
@@ -138,14 +138,14 @@ is( $another_two->content_type, 'text/plain',
 isa_ok( $another_two->last_modified, 'DateTime',
     'got last_modified for two.txt' );
 
-## change the value in CloudFiles, but don't let our $another_two object 
+## change the value in CloudFiles, but don't let our $another_two object
 ## know about it.
 my $value_changer = $container->object( name => 'two.txt' );
 is ($value_changer->get, 'this is one', 're-retrieved content for two.txt');
 $value_changer->put("this is two");
 
 is( $another_two->get,  'this is one', 'got cached content for two.txt' );
-is( $another_two->get(1), 'this is two', 'forced retrieval of two.txt');  
+is( $another_two->get(1), 'this is two', 'forced retrieval of two.txt');
 
 ## set the value back to what it was originally.
 $value_changer->put("this is one");
