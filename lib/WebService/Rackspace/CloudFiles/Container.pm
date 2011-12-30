@@ -150,7 +150,6 @@ sub objects {
                     etag          => $bit->{hash},
                     size          => $bit->{bytes},
                     content_type  => $bit->{content_type},
-                    #content_disposition  => $bit->{content_disposition},
                     last_modified => $bit->{last_modified},
                     );
             }
